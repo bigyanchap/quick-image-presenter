@@ -280,14 +280,45 @@ class QuickImagePresenter:
         control_frame.pack(fill='x', side='top')
         control_frame.pack_propagate(False)
         
-        # Close button (top right)
-        close_button = tk.Button(control_frame, text="✕", 
+        # Control buttons frame (right side)
+        control_buttons_frame = tk.Frame(control_frame, bg='black')
+        control_buttons_frame.pack(side='right', padx=20, pady=20)
+        
+        # Previous button
+        prev_button = tk.Button(control_buttons_frame, text="◀", 
+                               command=self.previous_image,
+                               bg='#333', fg='white', 
+                               font=('Segoe UI', 14, 'bold'),
+                               relief='flat', bd=0, padx=10, pady=5,
+                               activebackground='#555', activeforeground='white')
+        prev_button.pack(side='left', padx=5)
+        
+        # Pause/Resume button
+        self.pause_button = tk.Button(control_buttons_frame, text="⏸", 
+                                     command=self.toggle_pause,
+                                     bg='#333', fg='white', 
+                                     font=('Segoe UI', 14, 'bold'),
+                                     relief='flat', bd=0, padx=10, pady=5,
+                                     activebackground='#555', activeforeground='white')
+        self.pause_button.pack(side='left', padx=5)
+        
+        # Next button
+        next_button = tk.Button(control_buttons_frame, text="▶", 
+                               command=self.next_image,
+                               bg='#333', fg='white', 
+                               font=('Segoe UI', 14, 'bold'),
+                               relief='flat', bd=0, padx=10, pady=5,
+                               activebackground='#555', activeforeground='white')
+        next_button.pack(side='left', padx=5)
+        
+        # Close button
+        close_button = tk.Button(control_buttons_frame, text="✕", 
                                 command=self.stop_presentation,
                                 bg='red', fg='white', 
-                                font=('Segoe UI', 16, 'bold'),
-                                relief='flat', bd=0, padx=15, pady=8,
+                                font=('Segoe UI', 14, 'bold'),
+                                relief='flat', bd=0, padx=10, pady=5,
                                 activebackground='darkred', activeforeground='white')
-        close_button.pack(side='right', padx=20, pady=20)
+        close_button.pack(side='left', padx=5)
         
         # Timer label (top left)
         self.timer_label = tk.Label(control_frame, text="", 
@@ -300,6 +331,12 @@ class QuickImagePresenter:
                                      bg='black', fg='white', 
                                      font=('Segoe UI', 14))
         self.counter_label.pack(side='left', padx=20, pady=20)
+        
+        # Pause indicator (center)
+        self.pause_label = tk.Label(control_frame, text="", 
+                                   bg='black', fg='yellow', 
+                                   font=('Segoe UI', 16, 'bold'))
+        self.pause_label.pack(side='left', padx=20, pady=20)
         
         # Create image label
         self.image_label = tk.Label(self.presentation_window, bg='black')
@@ -322,24 +359,45 @@ class QuickImagePresenter:
     def previous_image(self):
         """Go to previous image"""
         if self.current_image_index > 0:
+            # Stop current timer
+            self.stop_timer = True
+            # Go to previous image
             self.current_image_index -= 1
             self.show_next_image()
     
     def next_image(self):
         """Go to next image"""
         if self.current_image_index < len(self.images) - 1:
+            # Stop current timer
+            self.stop_timer = True
+            # Go to next image
             self.current_image_index += 1
             self.show_next_image()
     
     def toggle_pause(self):
         """Toggle pause/resume"""
-        if hasattr(self, 'paused'):
-            self.paused = not self.paused
-            if not self.paused:
-                self.start_timer(self.current_display_time)
-        else:
-            self.paused = True
+        if not hasattr(self, 'paused'):
+            self.paused = False
+        
+        self.paused = not self.paused
+        
+        if self.paused:
+            # Pause: stop the timer
             self.stop_timer = True
+            # Update timer label to show paused state
+            self.timer_label.config(text="PAUSED")
+            # Show pause indicator
+            self.pause_label.config(text="⏸ PAUSED")
+            # Update pause button
+            self.pause_button.config(text="▶")
+        else:
+            # Resume: restart the timer with remaining time
+            remaining = getattr(self, 'remaining_time', self.current_display_time)
+            self.start_timer(remaining)
+            # Hide pause indicator
+            self.pause_label.config(text="")
+            # Update pause button
+            self.pause_button.config(text="⏸")
     
     def show_next_image(self):
         if not self.presentation_running or self.current_image_index >= len(self.images):
@@ -591,6 +649,7 @@ class QuickImagePresenter:
     
     def start_timer(self, duration):
         self.stop_timer = False
+        self.remaining_time = duration
         self.timer_thread = threading.Thread(target=self.countdown_timer, args=(duration,))
         self.timer_thread.daemon = True
         self.timer_thread.start()
@@ -599,6 +658,9 @@ class QuickImagePresenter:
         for i in range(duration, 0, -1):
             if self.stop_timer:
                 return
+            
+            # Update remaining time
+            self.remaining_time = i
             
             # Update timer label
             self.presentation_window.after(0, lambda t=i: self.timer_label.config(text=f"{t}s"))
@@ -632,8 +694,10 @@ This application provides automatic image presentation with the following featur
 
 Presentation Controls:
 • ESC key: Exit presentation
-• Left/Right arrows: Navigate images
+• Left/Right arrows: Navigate images (bypasses timer)
 • Spacebar: Pause/Resume
+• ◀/▶ buttons: Previous/Next image (bypasses timer)
+• ⏸ button: Pause/Resume presentation
 • X button: Exit presentation
 • Images are displayed in ascending alphabetical order
 • Display time is extracted from filename (e.g., 'image-10.jpg' = 10 seconds)
@@ -667,8 +731,10 @@ Current Status: Full-screen presentation mode
 
 Controls:
 • ESC key: Exit presentation
-• Left/Right arrows: Navigate images
+• Left/Right arrows: Navigate images (bypasses timer)
 • Spacebar: Pause/Resume
+• ◀/▶ buttons: Previous/Next image (bypasses timer)
+• ⏸ button: Pause/Resume presentation
 • X button: Exit presentation
 
 Image Display Algorithm:
