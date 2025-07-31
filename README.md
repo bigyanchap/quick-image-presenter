@@ -5,7 +5,7 @@ A Python desktop application for automatic image presentation with customizable 
 ## Features
 
 - **Folder Selection**: Choose a folder containing images to present
-- **Customizable Display Time**: Set default display time for images (1-60 seconds)
+- **Customizable Display Time**: Set default display time for images (in seconds)
 - **Transition Effects**: 10 different transition types (Dissolve, Fade, Slide, Zoom, etc.)
 - **Full-Screen Presentation**: Professional full-screen presentation mode
 - **Smart Timing**: Extract display time from image filenames (e.g., `image-10.jpg` = 10 seconds)
