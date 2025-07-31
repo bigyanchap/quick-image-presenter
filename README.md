@@ -33,7 +33,12 @@ Build a standalone executable that doesn't require Python installation:
 build_standalone.bat
 ```
 
-**Linux/macOS:**
+**Linux:**
+```bash
+./build_linux.sh
+```
+
+**macOS:**
 ```bash
 ./build_standalone.sh
 ```
@@ -44,6 +49,7 @@ python build_standalone.py
 ```
 
 For detailed build instructions, see [Standalone.md](Standalone.md).
+For Linux-specific instructions, see [Linux_Build_Guide.md](Linux_Build_Guide.md).
 
 ## Usage
 
@@ -156,7 +162,11 @@ quick-image-presenter/
 ├── build_standalone.py         # Build script
 ├── build_standalone.bat        # Windows build script
 ├── build_standalone.sh         # Unix build script
+├── build_linux.sh             # Linux build script
+├── quick_image_presenter_linux.spec  # Linux spec file
+├── requirements_linux.txt      # Linux dependencies
 ├── Standalone.md              # Detailed build guide
+├── Linux_Build_Guide.md       # Linux-specific guide
 ├── .gitignore                 # Git ignore rules
 └── dist/                      # Generated executable (after build)
 ```
