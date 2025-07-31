@@ -1,6 +1,8 @@
 # Quick Image Presenter
 
-A Python desktop application for automatic image presentation with customizable display times and transition effects.
+A Python desktop application for automatic image presentation with customizable display times and transition effects. 
+
+Enjoy this simple yet super useful Quick Image Presenter.
 
 ## Features
 

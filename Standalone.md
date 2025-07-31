@@ -2,6 +2,8 @@
 
 This guide will walk you through creating a standalone executable for the Quick Image Presenter application using PyInstaller.
 
+If you want it without creating it yourself, the standalone file is in /dist folder.
+
 ## Prerequisites
 
 1. **Python 3.7+** installed on your system
@@ -35,12 +37,24 @@ Ensure you have the following files in your project directory:
 
 ### Option A: Basic PyInstaller Command
 
+**Windows:**
+```bash
+python -m PyInstaller --onefile --windowed --icon=icon.png quick_image_presenter.py
+```
+
+**Linux/macOS:**
 ```bash
 pyinstaller --onefile --windowed --icon=icon.png quick_image_presenter.py
 ```
 
 ### Option B: Advanced PyInstaller Command (Recommended)
 
+**Windows:**
+```bash
+python -m PyInstaller --onefile --windowed --icon=icon.png --name="Quick Image Presenter" --add-data="icon.png;." quick_image_presenter.py
+```
+
+**Linux/macOS:**
 ```bash
 pyinstaller --onefile --windowed --icon=icon.png --name="Quick Image Presenter" --add-data="icon.png;." quick_image_presenter.py
 ```
@@ -86,6 +100,25 @@ After successful compilation, your executable will be located in:
    ```bash
    pip install --upgrade pip
    pip install -r requirements.txt
+   ```
+
+2. **PyInstaller Not Found (Windows)**
+   ```bash
+   # Use Python module approach instead of direct command
+   python -m PyInstaller --onefile --windowed --icon=icon.png quick_image_presenter.py
+   ```
+
+3. **Virtual Environment Issues**
+   ```bash
+   # If using a virtual environment, activate it first
+   .venv\Scripts\activate  # Windows
+   source .venv/bin/activate  # Linux/macOS
+   
+   # Then install PyInstaller in the virtual environment
+   python -m pip install pyinstaller
+   
+   # Now build the executable
+   python -m PyInstaller --onefile --windowed --icon=icon.png quick_image_presenter.py
    ```
 
 2. **Icon Not Loading**

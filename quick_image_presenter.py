@@ -692,6 +692,15 @@ This application provides automatic image presentation with the following featur
 • Image preview functionality
 • Modern UI design
 
+
+TO CONTRIBUTE TO THE PROJECT, PLEASE FOLLOW THESE STEPS:
+1. Fork the repository: https://github.com/bigyanchap/quick-image-presenter
+2. Create a new branch
+3. Make your changes
+4. Push your changes to your fork
+5. Create a pull request
+
+
 Presentation Controls:
 • ESC key: Exit presentation
 • Left/Right arrows: Navigate images (bypasses timer)
@@ -713,6 +722,13 @@ furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
+
+TO SUPPORT THE PROJECT, PLEASE CONTRIBUTE TO THE PROJECT:
+1. Donate to the project: https://www.buymeacoffee.com/bigyanchap
+2. Star the repository
+3. Share the project with your friends
+4. Leave a review on the repository
+5. Leave a review on the application
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,

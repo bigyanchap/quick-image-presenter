@@ -1,5 +1,4 @@
 # Build directories
-dist/
 build/
 __pycache__/
 *.pyc

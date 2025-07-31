@@ -52,7 +52,7 @@ def build_executable():
     
     # Build command
     cmd = [
-        "pyinstaller",
+        sys.executable, "-m", "PyInstaller",
         "--onefile",
         "--windowed",
         "--name=Quick Image Presenter",
