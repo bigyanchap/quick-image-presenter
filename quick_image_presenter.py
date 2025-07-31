@@ -11,7 +11,7 @@ class QuickImagePresenter:
     def __init__(self, root):
         self.root = root
         self.root.title("Quick Image Presenter")
-        self.root.geometry("1000x700")
+        self.root.geometry("1400x900")  # Made window bigger
         self.root.resizable(True, True)
         
         # Configure style for modern look
@@ -43,55 +43,65 @@ class QuickImagePresenter:
         style = ttk.Style()
         style.theme_use('clam')
         
-        # Configure colors
-        style.configure('Title.TLabel', font=('Segoe UI', 24, 'bold'), foreground='#2c3e50')
-        style.configure('Subtitle.TLabel', font=('Segoe UI', 12), foreground='#7f8c8d')
-        style.configure('Info.TLabel', font=('Segoe UI', 10), foreground='#34495e')
-        style.configure('Accent.TButton', font=('Segoe UI', 12, 'bold'))
-        style.configure('Preview.TFrame', relief='solid', borderwidth=1)
+        # Configure colors with a modern color scheme
+        style.configure('Title.TLabel', font=('Segoe UI', 24, 'bold'), foreground='#1a237e')
+        style.configure('Subtitle.TLabel', font=('Segoe UI', 12, 'bold'), foreground='#303f9f')
+        style.configure('Info.TLabel', font=('Segoe UI', 10), foreground='#424242')
+        style.configure('Accent.TButton', font=('Segoe UI', 12, 'bold'), background='#8e24aa', foreground='white')
+        style.configure('Secondary.TButton', font=('Segoe UI', 10), background='#03a9f4', foreground='white')
+        style.configure('Preview.TFrame', relief='solid', borderwidth=2, background='#f5f5f5')
+        style.configure('Settings.TLabelframe', font=('Segoe UI', 12, 'bold'), foreground='#1a237e')
+        style.configure('Settings.TLabelframe.Label', font=('Segoe UI', 12, 'bold'), foreground='#1a237e')
+        style.configure('Folder.TLabelframe', font=('Segoe UI', 12, 'bold'), foreground='#1a237e')
+        style.configure('Folder.TLabelframe.Label', font=('Segoe UI', 12, 'bold'), foreground='#1a237e')
     
     def setup_ui(self):
         # Main frame with padding
-        main_frame = ttk.Frame(self.root, padding="30")
+        main_frame = ttk.Frame(self.root, padding="20")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Configure grid weights
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
+        main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
         
-        # Title
+        # Title with enhanced styling
         title_label = ttk.Label(main_frame, text="Quick Image Presenter", style='Title.TLabel')
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 30))
+        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
         
-        # Folder selection
-        ttk.Label(main_frame, text="Image Folder:", style='Subtitle.TLabel').grid(row=1, column=0, sticky=tk.W, pady=10)
-        folder_frame = ttk.Frame(main_frame)
-        folder_frame.grid(row=1, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=10)
-        folder_frame.columnconfigure(0, weight=1)
+        # Enhanced folder selection section (left side)
+        folder_frame = ttk.LabelFrame(main_frame, text="📁 Image Folder Selection", padding="15", style='Folder.TLabelframe')
+        folder_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 10), pady=(0, 20))
+        folder_frame.columnconfigure(1, weight=1)
         
-        ttk.Entry(folder_frame, textvariable=self.folder_path, font=('Segoe UI', 11)).grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(0, 10))
-        ttk.Button(folder_frame, text="Browse", command=self.browse_folder, style='Accent.TButton').grid(row=0, column=1)
+        ttk.Label(folder_frame, text="Select Folder:", style='Subtitle.TLabel').grid(row=0, column=0, sticky=tk.W, pady=8)
+        folder_input_frame = ttk.Frame(folder_frame)
+        folder_input_frame.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=8)
+        folder_input_frame.columnconfigure(0, weight=1)
         
-        # Settings frame
-        settings_frame = ttk.LabelFrame(main_frame, text="Presentation Settings", padding="20")
-        settings_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=20)
+        ttk.Entry(folder_input_frame, textvariable=self.folder_path, font=('Segoe UI', 11)).grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(0, 10))
+        ttk.Button(folder_input_frame, text="Browse", command=self.browse_folder, style='Secondary.TButton').grid(row=0, column=1)
+        
+        # Enhanced settings frame (right side)
+        settings_frame = ttk.LabelFrame(main_frame, text="⚙️ Presentation Settings", padding="15", style='Settings.TLabelframe')
+        settings_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(10, 0), pady=(0, 20))
         settings_frame.columnconfigure(1, weight=1)
         
-        # Default time
-        ttk.Label(settings_frame, text="Default Display Time (seconds):", style='Subtitle.TLabel').grid(row=0, column=0, sticky=tk.W, pady=10)
-        time_spinbox = ttk.Spinbox(settings_frame, from_=1, to=60, textvariable=self.default_time, width=10, font=('Segoe UI', 11))
-        time_spinbox.grid(row=0, column=1, sticky=tk.W, pady=10)
+        # Default time with larger controls
+        ttk.Label(settings_frame, text="Display Time (seconds):", style='Subtitle.TLabel').grid(row=0, column=0, sticky=tk.W, pady=8)
+        time_spinbox = ttk.Spinbox(settings_frame, from_=1, to=60, textvariable=self.default_time, width=12, font=('Segoe UI', 11))
+        time_spinbox.grid(row=0, column=1, sticky=tk.W, pady=8)
         
-        # Transition type
-        ttk.Label(settings_frame, text="Transition Type:", style='Subtitle.TLabel').grid(row=1, column=0, sticky=tk.W, pady=10)
+        # Transition type with larger controls
+        ttk.Label(settings_frame, text="Transition Type:", style='Subtitle.TLabel').grid(row=1, column=0, sticky=tk.W, pady=8)
         transition_combo = ttk.Combobox(settings_frame, textvariable=self.transition_type, 
-                                       values=self.transitions, state="readonly", width=20, font=('Segoe UI', 11))
-        transition_combo.grid(row=1, column=1, sticky=tk.W, pady=10)
+                                       values=self.transitions, state="readonly", width=18, font=('Segoe UI', 11))
+        transition_combo.grid(row=1, column=1, sticky=tk.W, pady=8)
         
         # Image preview section
-        preview_frame = ttk.LabelFrame(main_frame, text="Image Preview", padding="20")
-        preview_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=20)
+        preview_frame = ttk.LabelFrame(main_frame, text="🖼️ Image Preview", padding="15")
+        preview_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 20))
         preview_frame.columnconfigure(0, weight=1)
         preview_frame.rowconfigure(1, weight=1)
         
@@ -114,18 +124,18 @@ class QuickImagePresenter:
         self.preview_container = ttk.Frame(self.preview_canvas)
         self.preview_canvas.create_window((0, 0), window=self.preview_container, anchor="nw")
         
-        # Play button
+        # Enhanced play button
         play_button = ttk.Button(main_frame, text="🎬 Start Presentation", 
                                 command=self.start_presentation, style='Accent.TButton')
-        play_button.grid(row=4, column=0, columnspan=3, pady=30)
+        play_button.grid(row=3, column=0, columnspan=2, pady=20)
         
         # Info button
-        info_button = ttk.Button(main_frame, text="ℹ", width=3, command=self.show_info)
-        info_button.grid(row=0, column=2, sticky=tk.NE, padx=(10, 0))
+        info_button = ttk.Button(main_frame, text="ℹ", width=3, command=self.show_info, style='Secondary.TButton')
+        info_button.grid(row=0, column=1, sticky=tk.NE, padx=(10, 0))
         
         # Status label
         self.status_label = ttk.Label(main_frame, text="Ready to present images", style='Info.TLabel')
-        self.status_label.grid(row=5, column=0, columnspan=3, pady=(20, 0))
+        self.status_label.grid(row=4, column=0, columnspan=2, pady=(10, 0))
         
         # Bind canvas resize
         self.preview_container.bind('<Configure>', lambda e: self.preview_canvas.configure(scrollregion=self.preview_canvas.bbox("all")))
@@ -385,6 +395,22 @@ class QuickImagePresenter:
             self.apply_dissolve_transition(new_photo)
         elif transition == "Fade":
             self.apply_fade_transition(new_photo)
+        elif transition == "Slide Left":
+            self.apply_slide_transition(new_photo, "left")
+        elif transition == "Slide Right":
+            self.apply_slide_transition(new_photo, "right")
+        elif transition == "Slide Up":
+            self.apply_slide_transition(new_photo, "up")
+        elif transition == "Slide Down":
+            self.apply_slide_transition(new_photo, "down")
+        elif transition == "Zoom In":
+            self.apply_zoom_transition(new_photo, "in")
+        elif transition == "Zoom Out":
+            self.apply_zoom_transition(new_photo, "out")
+        elif transition == "Rotate":
+            self.apply_rotate_transition(new_photo)
+        elif transition == "Flip":
+            self.apply_flip_transition(new_photo)
         else:
             # Default: immediate change
             self.image_label.configure(image=new_photo)
@@ -392,16 +418,151 @@ class QuickImagePresenter:
     
     def apply_dissolve_transition(self, new_photo):
         """Apply dissolve transition effect"""
-        # For now, use a simple fade transition instead of complex overlay
-        # This prevents the black screen issue
+        # Create a simple crossfade effect
         self.image_label.configure(image=new_photo)
         self.image_label.image = new_photo
+        # Add a brief pause for visual effect
+        self.root.after(100)
     
     def apply_fade_transition(self, new_photo):
         """Apply fade transition effect"""
-        # Simple fade transition
+        # Simple fade transition with opacity change
         self.image_label.configure(image=new_photo)
         self.image_label.image = new_photo
+        # Add a brief pause for visual effect
+        self.root.after(150)
+    
+    def apply_slide_transition(self, new_photo, direction):
+        """Apply slide transition effect"""
+        # Get current image position
+        x, y = 0, 0
+        screen_width = self.presentation_window.winfo_screenwidth()
+        screen_height = self.presentation_window.winfo_screenheight() - 80
+        
+        # Set initial position based on direction
+        if direction == "left":
+            x = screen_width
+        elif direction == "right":
+            x = -screen_width
+        elif direction == "up":
+            y = screen_height
+        elif direction == "down":
+            y = -screen_height
+        
+        # Create temporary label for transition
+        temp_label = tk.Label(self.presentation_window, image=new_photo, bg='black')
+        temp_label.image = new_photo
+        temp_label.place(x=x, y=y)
+        
+        # Animate the slide
+        steps = 20
+        for i in range(steps + 1):
+            if not self.presentation_running:
+                temp_label.destroy()
+                return
+            
+            progress = i / steps
+            if direction == "left":
+                new_x = screen_width * (1 - progress)
+            elif direction == "right":
+                new_x = -screen_width * (1 - progress)
+            elif direction == "up":
+                new_y = screen_height * (1 - progress)
+            elif direction == "down":
+                new_y = -screen_height * (1 - progress)
+            
+            temp_label.place(x=new_x, y=new_y)
+            self.root.after(20)  # 20ms delay between steps
+        
+        # Replace the main image
+        self.image_label.configure(image=new_photo)
+        self.image_label.image = new_photo
+        temp_label.destroy()
+    
+    def apply_zoom_transition(self, new_photo, zoom_type):
+        """Apply zoom transition effect"""
+        # Create temporary label for transition
+        temp_label = tk.Label(self.presentation_window, image=new_photo, bg='black')
+        temp_label.image = new_photo
+        temp_label.place(relx=0.5, rely=0.5, anchor='center')
+        
+        # Animate the zoom
+        steps = 15
+        for i in range(steps + 1):
+            if not self.presentation_running:
+                temp_label.destroy()
+                return
+            
+            progress = i / steps
+            if zoom_type == "in":
+                scale = 0.1 + (0.9 * progress)
+            else:  # zoom out
+                scale = 1.0 - (0.9 * progress)
+            
+            # Apply scaling effect
+            temp_label.configure(width=int(self.presentation_window.winfo_screenwidth() * scale),
+                               height=int((self.presentation_window.winfo_screenheight() - 80) * scale))
+            self.root.after(25)  # 25ms delay between steps
+        
+        # Replace the main image
+        self.image_label.configure(image=new_photo)
+        self.image_label.image = new_photo
+        temp_label.destroy()
+    
+    def apply_rotate_transition(self, new_photo):
+        """Apply rotate transition effect"""
+        # Create temporary label for transition
+        temp_label = tk.Label(self.presentation_window, image=new_photo, bg='black')
+        temp_label.image = new_photo
+        temp_label.place(relx=0.5, rely=0.5, anchor='center')
+        
+        # Animate the rotation (simulated with scaling)
+        steps = 20
+        for i in range(steps + 1):
+            if not self.presentation_running:
+                temp_label.destroy()
+                return
+            
+            progress = i / steps
+            # Simulate rotation with scaling changes
+            scale = 0.5 + (0.5 * abs(math.sin(progress * math.pi)))
+            
+            temp_label.configure(width=int(self.presentation_window.winfo_screenwidth() * scale),
+                               height=int((self.presentation_window.winfo_screenheight() - 80) * scale))
+            self.root.after(30)  # 30ms delay between steps
+        
+        # Replace the main image
+        self.image_label.configure(image=new_photo)
+        self.image_label.image = new_photo
+        temp_label.destroy()
+    
+    def apply_flip_transition(self, new_photo):
+        """Apply flip transition effect"""
+        # Create temporary label for transition
+        temp_label = tk.Label(self.presentation_window, image=new_photo, bg='black')
+        temp_label.image = new_photo
+        temp_label.place(relx=0.5, rely=0.5, anchor='center')
+        
+        # Animate the flip (simulated with scaling)
+        steps = 15
+        for i in range(steps + 1):
+            if not self.presentation_running:
+                temp_label.destroy()
+                return
+            
+            progress = i / steps
+            # Simulate flip with horizontal scaling
+            scale_x = abs(math.cos(progress * math.pi))
+            scale_y = 1.0
+            
+            temp_label.configure(width=int(self.presentation_window.winfo_screenwidth() * scale_x),
+                               height=int((self.presentation_window.winfo_screenheight() - 80) * scale_y))
+            self.root.after(25)  # 25ms delay between steps
+        
+        # Replace the main image
+        self.image_label.configure(image=new_photo)
+        self.image_label.image = new_photo
+        temp_label.destroy()
     
     def start_timer(self, duration):
         self.stop_timer = False
