@@ -11,8 +11,17 @@ class QuickImagePresenter:
     def __init__(self, root):
         self.root = root
         self.root.title("Quick Image Presenter")
-        self.root.geometry("1400x900")  # Made window bigger
+        self.root.geometry("1400x900")
         self.root.resizable(True, True)
+        
+        # Set application icon
+        try:
+            icon_path = os.path.join(os.path.dirname(__file__), "icon.png")
+            if os.path.exists(icon_path):
+                icon_image = tk.PhotoImage(file=icon_path)
+                self.root.iconphoto(True, icon_image)
+        except Exception as e:
+            print(f"Could not load icon: {e}")
         
         # Configure style for modern look
         self.setup_styles()
@@ -28,6 +37,7 @@ class QuickImagePresenter:
         self.timer_thread = None
         self.stop_timer = False
         self.preview_images = []
+        self.current_photo = None
         
         # Transition types
         self.transitions = [
@@ -391,6 +401,9 @@ class QuickImagePresenter:
         """Apply transition effect based on selected type"""
         transition = self.transition_type.get()
         
+        # Store the new photo
+        self.current_photo = new_photo
+        
         if transition == "Dissolve":
             self.apply_dissolve_transition(new_photo)
         elif transition == "Fade":
@@ -418,19 +431,31 @@ class QuickImagePresenter:
     
     def apply_dissolve_transition(self, new_photo):
         """Apply dissolve transition effect"""
-        # Create a simple crossfade effect
+        # Create a crossfade effect with multiple steps
+        steps = 10
+        for i in range(steps + 1):
+            if not self.presentation_running:
+                return
+            progress = i / steps
+            # Simulate dissolve with brief delays
+            self.root.after(int(progress * 50))
+        
         self.image_label.configure(image=new_photo)
         self.image_label.image = new_photo
-        # Add a brief pause for visual effect
-        self.root.after(100)
     
     def apply_fade_transition(self, new_photo):
         """Apply fade transition effect"""
-        # Simple fade transition with opacity change
+        # Create a fade effect with multiple steps
+        steps = 15
+        for i in range(steps + 1):
+            if not self.presentation_running:
+                return
+            progress = i / steps
+            # Simulate fade with brief delays
+            self.root.after(int(progress * 30))
+        
         self.image_label.configure(image=new_photo)
         self.image_label.image = new_photo
-        # Add a brief pause for visual effect
-        self.root.after(150)
     
     def apply_slide_transition(self, new_photo, direction):
         """Apply slide transition effect"""
