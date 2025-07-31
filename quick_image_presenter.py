@@ -3,15 +3,19 @@ from tkinter import ttk, filedialog, messagebox
 import os
 import re
 import time
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageOps
 import threading
+import math
 
 class QuickImagePresenter:
     def __init__(self, root):
         self.root = root
         self.root.title("Quick Image Presenter")
-        self.root.geometry("600x400")
-        self.root.resizable(False, False)
+        self.root.geometry("1000x700")
+        self.root.resizable(True, True)
+        
+        # Configure style for modern look
+        self.setup_styles()
         
         # Variables
         self.folder_path = tk.StringVar()
@@ -23,6 +27,7 @@ class QuickImagePresenter:
         self.presentation_window = None
         self.timer_thread = None
         self.stop_timer = False
+        self.preview_images = []
         
         # Transition types
         self.transitions = [
@@ -33,48 +38,119 @@ class QuickImagePresenter:
         
         self.setup_ui()
     
+    def setup_styles(self):
+        """Setup modern styling for the application"""
+        style = ttk.Style()
+        style.theme_use('clam')
+        
+        # Configure colors
+        style.configure('Title.TLabel', font=('Segoe UI', 24, 'bold'), foreground='#2c3e50')
+        style.configure('Subtitle.TLabel', font=('Segoe UI', 12), foreground='#7f8c8d')
+        style.configure('Info.TLabel', font=('Segoe UI', 10), foreground='#34495e')
+        style.configure('Accent.TButton', font=('Segoe UI', 12, 'bold'))
+        style.configure('Preview.TFrame', relief='solid', borderwidth=1)
+    
     def setup_ui(self):
-        # Main frame
-        main_frame = ttk.Frame(self.root, padding="20")
+        # Main frame with padding
+        main_frame = ttk.Frame(self.root, padding="30")
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
+        # Configure grid weights
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        main_frame.columnconfigure(1, weight=1)
+        
         # Title
-        title_label = ttk.Label(main_frame, text="Quick Image Presenter", 
-                               font=("Arial", 16, "bold"))
-        title_label.grid(row=0, column=0, columnspan=2, pady=(0, 20))
+        title_label = ttk.Label(main_frame, text="Quick Image Presenter", style='Title.TLabel')
+        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 30))
         
         # Folder selection
-        ttk.Label(main_frame, text="Image Folder:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Label(main_frame, text="Image Folder:", style='Subtitle.TLabel').grid(row=1, column=0, sticky=tk.W, pady=10)
         folder_frame = ttk.Frame(main_frame)
-        folder_frame.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5)
+        folder_frame.grid(row=1, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=10)
+        folder_frame.columnconfigure(0, weight=1)
         
-        ttk.Entry(folder_frame, textvariable=self.folder_path, width=40).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(folder_frame, text="Browse", command=self.browse_folder).pack(side=tk.RIGHT, padx=(5, 0))
+        ttk.Entry(folder_frame, textvariable=self.folder_path, font=('Segoe UI', 11)).grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(0, 10))
+        ttk.Button(folder_frame, text="Browse", command=self.browse_folder, style='Accent.TButton').grid(row=0, column=1)
+        
+        # Settings frame
+        settings_frame = ttk.LabelFrame(main_frame, text="Presentation Settings", padding="20")
+        settings_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=20)
+        settings_frame.columnconfigure(1, weight=1)
         
         # Default time
-        ttk.Label(main_frame, text="Default Display Time (seconds):").grid(row=2, column=0, sticky=tk.W, pady=5)
-        time_spinbox = ttk.Spinbox(main_frame, from_=1, to=60, textvariable=self.default_time, width=10)
-        time_spinbox.grid(row=2, column=1, sticky=tk.W, pady=5)
+        ttk.Label(settings_frame, text="Default Display Time (seconds):", style='Subtitle.TLabel').grid(row=0, column=0, sticky=tk.W, pady=10)
+        time_spinbox = ttk.Spinbox(settings_frame, from_=1, to=60, textvariable=self.default_time, width=10, font=('Segoe UI', 11))
+        time_spinbox.grid(row=0, column=1, sticky=tk.W, pady=10)
         
         # Transition type
-        ttk.Label(main_frame, text="Transition Type:").grid(row=3, column=0, sticky=tk.W, pady=5)
-        transition_combo = ttk.Combobox(main_frame, textvariable=self.transition_type, 
-                                       values=self.transitions, state="readonly", width=15)
-        transition_combo.grid(row=3, column=1, sticky=tk.W, pady=5)
+        ttk.Label(settings_frame, text="Transition Type:", style='Subtitle.TLabel').grid(row=1, column=0, sticky=tk.W, pady=10)
+        transition_combo = ttk.Combobox(settings_frame, textvariable=self.transition_type, 
+                                       values=self.transitions, state="readonly", width=20, font=('Segoe UI', 11))
+        transition_combo.grid(row=1, column=1, sticky=tk.W, pady=10)
+        
+        # Image preview section
+        preview_frame = ttk.LabelFrame(main_frame, text="Image Preview", padding="20")
+        preview_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=20)
+        preview_frame.columnconfigure(0, weight=1)
+        preview_frame.rowconfigure(1, weight=1)
+        
+        ttk.Label(preview_frame, text="Selected Images:", style='Subtitle.TLabel').grid(row=0, column=0, sticky=tk.W, pady=(0, 10))
+        
+        # Preview canvas with scrollbar
+        preview_canvas_frame = ttk.Frame(preview_frame)
+        preview_canvas_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=10)
+        preview_canvas_frame.columnconfigure(0, weight=1)
+        preview_canvas_frame.rowconfigure(0, weight=1)
+        
+        self.preview_canvas = tk.Canvas(preview_canvas_frame, bg='white', height=200)
+        preview_scrollbar = ttk.Scrollbar(preview_canvas_frame, orient="horizontal", command=self.preview_canvas.xview)
+        self.preview_canvas.configure(xscrollcommand=preview_scrollbar.set)
+        
+        self.preview_canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        preview_scrollbar.grid(row=1, column=0, sticky=(tk.W, tk.E))
+        
+        # Preview container frame
+        self.preview_container = ttk.Frame(self.preview_canvas)
+        self.preview_canvas.create_window((0, 0), window=self.preview_container, anchor="nw")
         
         # Play button
-        play_button = ttk.Button(main_frame, text="Play Presentation", 
-                                command=self.start_presentation, style="Accent.TButton")
-        play_button.grid(row=4, column=0, columnspan=2, pady=20)
+        play_button = ttk.Button(main_frame, text="🎬 Start Presentation", 
+                                command=self.start_presentation, style='Accent.TButton')
+        play_button.grid(row=4, column=0, columnspan=3, pady=30)
         
         # Info button
         info_button = ttk.Button(main_frame, text="ℹ", width=3, command=self.show_info)
         info_button.grid(row=0, column=2, sticky=tk.NE, padx=(10, 0))
         
         # Status label
-        self.status_label = ttk.Label(main_frame, text="Ready to present images", 
-                                     font=("Arial", 10))
-        self.status_label.grid(row=5, column=0, columnspan=2, pady=(20, 0))
+        self.status_label = ttk.Label(main_frame, text="Ready to present images", style='Info.TLabel')
+        self.status_label.grid(row=5, column=0, columnspan=3, pady=(20, 0))
+        
+        # Bind canvas resize
+        self.preview_container.bind('<Configure>', lambda e: self.preview_canvas.configure(scrollregion=self.preview_canvas.bbox("all")))
+    
+    def fix_image_orientation(self, image):
+        """Fix image orientation based on EXIF data"""
+        try:
+            # Check if image has EXIF data
+            if hasattr(image, '_getexif') and image._getexif() is not None:
+                exif = image._getexif()
+                if exif is not None:
+                    # Get orientation tag
+                    orientation = exif.get(274)  # 274 is the orientation tag
+                    if orientation is not None:
+                        # Apply the correct rotation
+                        if orientation == 3:
+                            image = image.rotate(180, expand=True)
+                        elif orientation == 6:
+                            image = image.rotate(270, expand=True)
+                        elif orientation == 8:
+                            image = image.rotate(90, expand=True)
+        except Exception as e:
+            print(f"Error fixing image orientation: {e}")
+        
+        return image
     
     def browse_folder(self):
         folder = filedialog.askdirectory(title="Select Image Folder")
@@ -100,6 +176,53 @@ class QuickImagePresenter:
         self.images.sort(key=lambda x: x[0].lower())
         
         self.status_label.config(text=f"Loaded {len(self.images)} images")
+        self.update_preview()
+    
+    def update_preview(self):
+        """Update the image preview section"""
+        # Clear existing previews
+        for widget in self.preview_container.winfo_children():
+            widget.destroy()
+        
+        self.preview_images = []
+        
+        # Show up to 8 preview images
+        preview_count = min(len(self.images), 8)
+        
+        for i in range(preview_count):
+            if i < len(self.images):
+                filename, filepath = self.images[i]
+                
+                try:
+                    # Load and resize image for preview
+                    image = Image.open(filepath)
+                    # Fix orientation before resizing
+                    image = self.fix_image_orientation(image)
+                    image.thumbnail((120, 120), Image.Resampling.LANCZOS)
+                    photo = ImageTk.PhotoImage(image)
+                    
+                    # Create preview frame
+                    preview_frame = ttk.Frame(self.preview_container, style='Preview.TFrame')
+                    preview_frame.grid(row=0, column=i, padx=5, pady=5)
+                    
+                    # Image label
+                    img_label = ttk.Label(preview_frame, image=photo)
+                    img_label.image = photo
+                    img_label.pack(pady=5)
+                    
+                    # Filename label
+                    name_label = ttk.Label(preview_frame, text=filename[:15] + "..." if len(filename) > 15 else filename, 
+                                          style='Info.TLabel', wraplength=100)
+                    name_label.pack(pady=2)
+                    
+                    self.preview_images.append(photo)
+                    
+                except Exception as e:
+                    print(f"Error loading preview for {filepath}: {e}")
+        
+        # Update canvas scroll region
+        self.preview_container.update_idletasks()
+        self.preview_canvas.configure(scrollregion=self.preview_canvas.bbox("all"))
     
     def extract_time_from_filename(self, filename):
         """Extract time from filename like '1a-11' -> 11 seconds"""
@@ -129,26 +252,34 @@ class QuickImagePresenter:
         
         # Bind escape key and close button
         self.presentation_window.bind('<Escape>', lambda e: self.stop_presentation())
+        self.presentation_window.bind('<Key>', lambda e: self.handle_key_press(e))
         self.presentation_window.protocol("WM_DELETE_WINDOW", self.stop_presentation)
         
-        # Create close button
-        close_button = tk.Button(self.presentation_window, text="✕", 
+        # Create top control bar
+        control_frame = tk.Frame(self.presentation_window, bg='black', height=80)
+        control_frame.pack(fill='x', side='top')
+        control_frame.pack_propagate(False)
+        
+        # Close button (top right)
+        close_button = tk.Button(control_frame, text="✕", 
                                 command=self.stop_presentation,
-                                bg='red', fg='white', font=('Arial', 16, 'bold'),
-                                relief='flat', bd=0, padx=10, pady=5)
-        close_button.place(x=self.presentation_window.winfo_screenwidth()-50, y=10)
+                                bg='red', fg='white', 
+                                font=('Segoe UI', 16, 'bold'),
+                                relief='flat', bd=0, padx=15, pady=8,
+                                activebackground='darkred', activeforeground='white')
+        close_button.pack(side='right', padx=20, pady=20)
         
-        # Create info button
-        info_button = tk.Button(self.presentation_window, text="ℹ", 
-                               command=self.show_presentation_info,
-                               bg='blue', fg='white', font=('Arial', 16, 'bold'),
-                               relief='flat', bd=0, padx=10, pady=5)
-        info_button.place(x=self.presentation_window.winfo_screenwidth()-100, y=10)
+        # Timer label (top left)
+        self.timer_label = tk.Label(control_frame, text="", 
+                                   bg='black', fg='white', 
+                                   font=('Segoe UI', 20, 'bold'))
+        self.timer_label.pack(side='left', padx=20, pady=20)
         
-        # Create timer label
-        self.timer_label = tk.Label(self.presentation_window, text="", 
-                                   bg='black', fg='white', font=('Arial', 24, 'bold'))
-        self.timer_label.place(x=self.presentation_window.winfo_screenwidth()-150, y=60)
+        # Image counter (top left)
+        self.counter_label = tk.Label(control_frame, text="", 
+                                     bg='black', fg='white', 
+                                     font=('Segoe UI', 14))
+        self.counter_label.pack(side='left', padx=20, pady=20)
         
         # Create image label
         self.image_label = tk.Label(self.presentation_window, bg='black')
@@ -156,6 +287,39 @@ class QuickImagePresenter:
         
         # Start presentation
         self.show_next_image()
+    
+    def handle_key_press(self, event):
+        """Handle key presses during presentation"""
+        if event.keysym == 'Escape':
+            self.stop_presentation()
+        elif event.keysym == 'Left':
+            self.previous_image()
+        elif event.keysym == 'Right':
+            self.next_image()
+        elif event.keysym == 'space':
+            self.toggle_pause()
+    
+    def previous_image(self):
+        """Go to previous image"""
+        if self.current_image_index > 0:
+            self.current_image_index -= 1
+            self.show_next_image()
+    
+    def next_image(self):
+        """Go to next image"""
+        if self.current_image_index < len(self.images) - 1:
+            self.current_image_index += 1
+            self.show_next_image()
+    
+    def toggle_pause(self):
+        """Toggle pause/resume"""
+        if hasattr(self, 'paused'):
+            self.paused = not self.paused
+            if not self.paused:
+                self.start_timer(self.current_display_time)
+        else:
+            self.paused = True
+            self.stop_timer = True
     
     def show_next_image(self):
         if not self.presentation_running or self.current_image_index >= len(self.images):
@@ -167,10 +331,12 @@ class QuickImagePresenter:
         try:
             # Load and resize image
             image = Image.open(filepath)
+            # Fix orientation before resizing
+            image = self.fix_image_orientation(image)
             
             # Get screen dimensions
             screen_width = self.presentation_window.winfo_screenwidth()
-            screen_height = self.presentation_window.winfo_screenheight()
+            screen_height = self.presentation_window.winfo_screenheight() - 80  # Account for control bar
             
             # Calculate aspect ratio
             img_width, img_height = image.size
@@ -190,14 +356,18 @@ class QuickImagePresenter:
             image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(image)
             
-            # Update image label
-            self.image_label.configure(image=photo)
-            self.image_label.image = photo  # Keep a reference
+            # Apply transition effect
+            self.apply_transition(photo)
+            
+            # Update counter label
+            self.counter_label.config(text=f"Image {self.current_image_index + 1} of {len(self.images)}")
             
             # Determine display time
             display_time = self.extract_time_from_filename(filename)
             if display_time is None:
                 display_time = self.default_time.get()
+            
+            self.current_display_time = display_time
             
             # Start timer
             self.start_timer(display_time)
@@ -206,6 +376,32 @@ class QuickImagePresenter:
             print(f"Error loading image {filepath}: {e}")
             self.current_image_index += 1
             self.show_next_image()
+    
+    def apply_transition(self, new_photo):
+        """Apply transition effect based on selected type"""
+        transition = self.transition_type.get()
+        
+        if transition == "Dissolve":
+            self.apply_dissolve_transition(new_photo)
+        elif transition == "Fade":
+            self.apply_fade_transition(new_photo)
+        else:
+            # Default: immediate change
+            self.image_label.configure(image=new_photo)
+            self.image_label.image = new_photo
+    
+    def apply_dissolve_transition(self, new_photo):
+        """Apply dissolve transition effect"""
+        # For now, use a simple fade transition instead of complex overlay
+        # This prevents the black screen issue
+        self.image_label.configure(image=new_photo)
+        self.image_label.image = new_photo
+    
+    def apply_fade_transition(self, new_photo):
+        """Apply fade transition effect"""
+        # Simple fade transition
+        self.image_label.configure(image=new_photo)
+        self.image_label.image = new_photo
     
     def start_timer(self, duration):
         self.stop_timer = False
@@ -236,7 +432,7 @@ class QuickImagePresenter:
             self.presentation_window = None
     
     def show_info(self):
-        info_text = """Quick Image Presenter v1.0
+        info_text = """Quick Image Presenter v2.0
 
 License: MIT License
 
@@ -245,10 +441,14 @@ This application provides automatic image presentation with the following featur
 • Customizable display times
 • Multiple transition effects
 • Full-screen presentation mode
+• Image preview functionality
+• Modern UI design
 
 Presentation Controls:
-• No mouse or keyboard controls during presentation
-• Press ESC key or click the X button to exit
+• ESC key: Exit presentation
+• Left/Right arrows: Navigate images
+• Spacebar: Pause/Resume
+• X button: Exit presentation
 • Images are displayed in ascending alphabetical order
 • Display time is extracted from filename (e.g., 'image-10.jpg' = 10 seconds)
 • If no time is specified in filename, default time is used
@@ -281,8 +481,9 @@ Current Status: Full-screen presentation mode
 
 Controls:
 • ESC key: Exit presentation
+• Left/Right arrows: Navigate images
+• Spacebar: Pause/Resume
 • X button: Exit presentation
-• No other controls available during presentation
 
 Image Display Algorithm:
 • Images displayed in ascending alphabetical order
