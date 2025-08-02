@@ -103,11 +103,7 @@ class QuickImagePresenter:
         time_spinbox = ttk.Spinbox(settings_frame, from_=1, to=60, textvariable=self.default_time, width=12, font=('Segoe UI', 11))
         time_spinbox.grid(row=0, column=1, sticky=tk.W, pady=8)
         
-        # Transition type with larger controls
-        ttk.Label(settings_frame, text="Transition Type:", style='Subtitle.TLabel').grid(row=1, column=0, sticky=tk.W, pady=8)
-        transition_combo = ttk.Combobox(settings_frame, textvariable=self.transition_type, 
-                                       values=self.transitions, state="readonly", width=18, font=('Segoe UI', 11))
-        transition_combo.grid(row=1, column=1, sticky=tk.W, pady=8)
+        # Removed transition type selection for stable timer
         
         # Image preview section
         preview_frame = ttk.LabelFrame(main_frame, text="🖼️ Image Preview", padding="15")
@@ -369,18 +365,14 @@ class QuickImagePresenter:
     def previous_image(self):
         """Go to previous image"""
         if self.current_image_index > 0:
-            # Stop current timer
-            self.stop_timer = True
-            # Go to previous image
+            # Go to previous image (timer will be stopped in show_next_image)
             self.current_image_index -= 1
             self.show_next_image()
     
     def next_image(self):
         """Go to next image"""
         if self.current_image_index < len(self.images) - 1:
-            # Stop current timer
-            self.stop_timer = True
-            # Go to next image
+            # Go to next image (timer will be stopped in show_next_image)
             self.current_image_index += 1
             self.show_next_image()
     
@@ -413,6 +405,13 @@ class QuickImagePresenter:
         if not self.presentation_running or self.current_image_index >= len(self.images):
             self.stop_presentation()
             return
+        
+        # Ensure any existing timer is completely stopped before loading new image
+        self.stop_timer = True
+        if self.timer_thread and self.timer_thread.is_alive():
+            self.timer_thread.join(timeout=1.0)  # Wait up to 1 second
+        self.timer_thread = None
+        self.remaining_time = None
         
         filename, filepath = self.images[self.current_image_index]
         
@@ -457,7 +456,7 @@ class QuickImagePresenter:
             
             self.current_display_time = display_time
             
-            # Start timer
+            # Start timer only after ensuring previous one is stopped
             self.start_timer(display_time)
             
         except Exception as e:
@@ -466,36 +465,13 @@ class QuickImagePresenter:
             self.show_next_image()
     
     def apply_transition(self, new_photo):
-        """Apply transition effect based on selected type"""
-        transition = self.transition_type.get()
-        
+        """Apply immediate image change without transitions for stable timer"""
         # Store the new photo
         self.current_photo = new_photo
         
-        if transition == "Dissolve":
-            self.apply_dissolve_transition(new_photo)
-        elif transition == "Fade":
-            self.apply_fade_transition(new_photo)
-        elif transition == "Slide Left":
-            self.apply_slide_transition(new_photo, "left")
-        elif transition == "Slide Right":
-            self.apply_slide_transition(new_photo, "right")
-        elif transition == "Slide Up":
-            self.apply_slide_transition(new_photo, "up")
-        elif transition == "Slide Down":
-            self.apply_slide_transition(new_photo, "down")
-        elif transition == "Zoom In":
-            self.apply_zoom_transition(new_photo, "in")
-        elif transition == "Zoom Out":
-            self.apply_zoom_transition(new_photo, "out")
-        elif transition == "Rotate":
-            self.apply_rotate_transition(new_photo)
-        elif transition == "Flip":
-            self.apply_flip_transition(new_photo)
-        else:
-            # Default: immediate change
-            self.image_label.configure(image=new_photo)
-            self.image_label.image = new_photo
+        # Immediate change - no transitions to avoid timer conflicts
+        self.image_label.configure(image=new_photo)
+        self.image_label.image = new_photo
     
     def apply_dissolve_transition(self, new_photo):
         """Apply dissolve transition effect"""
@@ -658,6 +634,7 @@ class QuickImagePresenter:
         temp_label.destroy()
     
     def start_timer(self, duration):
+        # Start new timer thread (previous timer should already be stopped)
         self.stop_timer = False
         self.remaining_time = duration
         self.timer_thread = threading.Thread(target=self.countdown_timer, args=(duration,))
@@ -673,13 +650,16 @@ class QuickImagePresenter:
             self.remaining_time = i
             
             # Update timer label
-            self.presentation_window.after(0, lambda t=i: self.timer_label.config(text=f"{t}s"))
+            if self.presentation_window and self.timer_label:
+                self.presentation_window.after(0, lambda t=i: self.timer_label.config(text=f"{t}s"))
             time.sleep(1)
         
-        if not self.stop_timer:
+        # Only proceed to next image if timer wasn't stopped
+        if not self.stop_timer and self.presentation_running:
             # Move to next image
             self.current_image_index += 1
-            self.presentation_window.after(0, self.show_next_image)
+            if self.presentation_window:
+                self.presentation_window.after(0, self.show_next_image)
     
     def stop_presentation(self):
         self.presentation_running = False
