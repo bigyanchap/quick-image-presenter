@@ -192,8 +192,15 @@ class QuickImagePresenter:
                 filepath = os.path.join(folder, filename)
                 self.images.append((filename, filepath))
         
-        # Sort images in ascending order
-        self.images.sort(key=lambda x: x[0].lower())
+        # Sort images using natural sort (handles numbers properly)
+        def natural_sort_key(filename):
+            # Split filename into parts: numbers and non-numbers
+            import re
+            parts = re.split(r'(\d+)', filename.lower())
+            # Convert number parts to integers for proper numerical sorting
+            return [int(part) if part.isdigit() else part for part in parts]
+        
+        self.images.sort(key=lambda x: natural_sort_key(x[0]))
         
         self.status_label.config(text=f"Loaded {len(self.images)} images")
         self.update_preview()
@@ -320,12 +327,6 @@ class QuickImagePresenter:
                                 activebackground='darkred', activeforeground='white')
         close_button.pack(side='left', padx=5)
         
-        # Timer label (top left)
-        self.timer_label = tk.Label(control_frame, text="", 
-                                   bg='black', fg='white', 
-                                   font=('Segoe UI', 20, 'bold'))
-        self.timer_label.pack(side='left', padx=20, pady=20)
-        
         # Image counter (top left)
         self.counter_label = tk.Label(control_frame, text="", 
                                      bg='black', fg='white', 
@@ -341,6 +342,15 @@ class QuickImagePresenter:
         # Create image label
         self.image_label = tk.Label(self.presentation_window, bg='black')
         self.image_label.pack(expand=True, fill='both')
+        
+        # Timer label (bottom left) - created AFTER image label to ensure it's on top
+        self.timer_label = tk.Label(self.presentation_window, text="Ready", 
+                                   bg='black', fg='white', 
+                                   font=('Segoe UI', 60, 'bold'))
+        # Position timer at bottom left using absolute positioning
+        self.presentation_window.update_idletasks()
+        screen_height = self.presentation_window.winfo_screenheight()
+        self.timer_label.place(x=50, y=screen_height - 150)
         
         # Start presentation
         self.show_next_image()
