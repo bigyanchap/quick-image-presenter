@@ -1,0 +1,91 @@
+# Linux Build Instructions
+
+## Option 1: Direct Linux Build (Recommended)
+
+If you have access to a Linux system, follow these steps:
+
+### Prerequisites
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install python3 python3-pip python3-venv python3-dev python3-tk tk-dev
+sudo apt-get install libjpeg-dev libpng-dev libtiff-dev libwebp-dev
+
+# CentOS/RHEL/Fedora
+sudo yum install python3 python3-pip python3-devel tk-devel
+sudo yum install libjpeg-devel libpng-devel libtiff-devel libwebp-devel
+```
+
+### Build Steps
+```bash
+# Clone or copy the project to Linux
+cd quick-image-presenter
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Build executable
+python -m PyInstaller \
+    --onefile \
+    --windowed \
+    --icon=icon.png \
+    --name="Quick Image Presenter" \
+    --add-data="icon.png:." \
+    quick_image_presenter.py
+
+# Make executable
+chmod +x "dist/Quick Image Presenter"
+
+# Test the executable
+./dist/Quick\ Image\ Presenter
+```
+
+## Option 2: Using the Build Script
+
+```bash
+# Make script executable
+chmod +x build_linux.sh
+
+# Run build script
+./build_linux.sh
+```
+
+## Option 3: Docker Build
+
+```bash
+# Build using Docker
+docker run --rm -v "$(pwd):/app" -w /app ubuntu:20.04 bash -c "
+    apt-get update && apt-get install -y python3 python3-pip python3-venv python3-dev python3-tk tk-dev libjpeg-dev libpng-dev libtiff-dev libwebp-dev
+    python3 -m venv .venv
+    source .venv/bin/activate
+    pip install -r requirements.txt
+    python -m PyInstaller --onefile --windowed --icon=icon.png --name='Quick Image Presenter' --add-data='icon.png:.' quick_image_presenter.py
+    chmod +x 'dist/Quick Image Presenter'
+"
+```
+
+## Distribution
+
+The Linux executable can be distributed as:
+- Single file: `dist/Quick Image Presenter`
+- Size: ~20-30 MB
+- Dependencies: Minimal system libraries (usually pre-installed)
+
+## Testing
+
+Test the executable on different Linux distributions:
+- Ubuntu 18.04+
+- Debian 10+
+- CentOS 7+
+- Fedora 30+
+
+## Troubleshooting
+
+1. **Permission denied**: `chmod +x "dist/Quick Image Presenter"`
+2. **Missing libraries**: Install system dependencies listed above
+3. **Display issues**: Ensure X11 is running or use `export DISPLAY=:0`
