@@ -6,6 +6,8 @@ import time
 from PIL import Image, ImageTk, ImageOps
 import threading
 import math
+import platform
+import subprocess
 
 class QuickImagePresenter:
     def __init__(self, root):
@@ -38,6 +40,7 @@ class QuickImagePresenter:
         self.stop_timer = False
         self.preview_images = []
         self.current_photo = None
+        self.sleep_prevention_active = False
         
         # Transition types
         self.transitions = [
@@ -145,6 +148,176 @@ class QuickImagePresenter:
         
         # Bind canvas resize
         self.preview_container.bind('<Configure>', lambda e: self.preview_canvas.configure(scrollregion=self.preview_canvas.bbox("all")))
+    
+    def prevent_sleep(self):
+        """Prevent system from going to sleep during presentation"""
+        try:
+            system = platform.system()
+            print(f"Preventing sleep on {system} system...")
+            
+            if system == "Windows":
+                # Windows: Use SetThreadExecutionState API via ctypes
+                try:
+                    import ctypes
+                    from ctypes import wintypes
+                    
+                    # Define the SetThreadExecutionState function
+                    kernel32 = ctypes.windll.kernel32
+                    SetThreadExecutionState = kernel32.SetThreadExecutionState
+                    SetThreadExecutionState.argtypes = [wintypes.DWORD]
+                    SetThreadExecutionState.restype = wintypes.DWORD
+                    
+                    # Constants for preventing sleep
+                    ES_CONTINUOUS = 0x80000000
+                    ES_SYSTEM_REQUIRED = 0x00000001
+                    ES_DISPLAY_REQUIRED = 0x00000002
+                    
+                    # Prevent system sleep and display dimming
+                    result = SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
+                    if result:
+                        print("Windows sleep prevention activated successfully")
+                        self.windows_sleep_prevention_active = True
+                    else:
+                        print("Failed to activate Windows sleep prevention")
+                        
+                except Exception as e:
+                    print(f"Windows sleep prevention failed: {e}")
+                    # Fallback to powercfg
+                    try:
+                        subprocess.run(['powercfg', '/change', 'monitor-timeout-ac', '0'], 
+                                    capture_output=True, check=False)
+                        subprocess.run(['powercfg', '/change', 'monitor-timeout-dc', '0'], 
+                                    capture_output=True, check=False)
+                        subprocess.run(['powercfg', '/change', 'standby-timeout-ac', '0'], 
+                                    capture_output=True, check=False)
+                        subprocess.run(['powercfg', '/change', 'standby-timeout-dc', '0'], 
+                                    capture_output=True, check=False)
+                        print("Windows sleep prevention activated via powercfg")
+                    except Exception as e2:
+                        print(f"Powercfg fallback also failed: {e2}")
+                
+            elif system == "Darwin":  # macOS
+                # macOS: Use caffeinate to prevent sleep
+                try:
+                    result = subprocess.run(['caffeinate', '-i', '-d'], 
+                                        capture_output=True, text=True, check=False)
+                    if result.returncode == 0:
+                        print("macOS sleep prevention activated successfully")
+                        self.macos_caffeinate_process = True
+                    else:
+                        print(f"macOS sleep prevention failed: {result.stderr}")
+                except Exception as e:
+                    print(f"macOS sleep prevention failed: {e}")
+                
+            elif system == "Linux":
+                # Linux: Use xset to prevent screen saver and DPMS
+                try:
+                    result1 = subprocess.run(['xset', 's', 'off'], capture_output=True, text=True, check=False)
+                    result2 = subprocess.run(['xset', 's', 'noblank'], capture_output=True, text=True, check=False)
+                    result3 = subprocess.run(['xset', '-dpms'], capture_output=True, text=True, check=False)
+                    
+                    if result1.returncode == 0 and result2.returncode == 0 and result3.returncode == 0:
+                        print("Linux sleep prevention activated successfully")
+                        self.linux_sleep_prevention_active = True
+                    else:
+                        print(f"Linux sleep prevention failed: {result1.stderr}, {result2.stderr}, {result3.stderr}")
+                        
+                except FileNotFoundError:
+                    print("xset not found, trying alternative methods...")
+                    # Try alternative methods for Linux
+                    try:
+                        subprocess.run(['gsettings', 'set', 'org.gnome.desktop.session', 'idle-delay', 'uint32', '0'], 
+                                    capture_output=True, check=False)
+                        print("Linux sleep prevention activated via gsettings")
+                    except:
+                        print("Linux sleep prevention methods not available")
+                    
+        except Exception as e:
+            print(f"Could not prevent sleep: {e}")
+    
+    def restore_sleep_settings(self):
+        """Restore normal sleep settings after presentation"""
+        try:
+            system = platform.system()
+            print(f"Restoring sleep settings on {system} system...")
+            
+            if system == "Windows":
+                # Windows: Restore using SetThreadExecutionState
+                try:
+                    import ctypes
+                    from ctypes import wintypes
+                    
+                    # Define the SetThreadExecutionState function
+                    kernel32 = ctypes.windll.kernel32
+                    SetThreadExecutionState = kernel32.SetThreadExecutionState
+                    SetThreadExecutionState.argtypes = [wintypes.DWORD]
+                    SetThreadExecutionState.restype = wintypes.DWORD
+                    
+                    # Constants for normal operation
+                    ES_CONTINUOUS = 0x80000000
+                    
+                    # Restore normal sleep behavior
+                    result = SetThreadExecutionState(ES_CONTINUOUS)
+                    if result:
+                        print("Windows sleep settings restored successfully")
+                        self.windows_sleep_prevention_active = False
+                    else:
+                        print("Failed to restore Windows sleep settings")
+                        
+                except Exception as e:
+                    print(f"Windows sleep restoration failed: {e}")
+                    # Fallback to powercfg
+                    try:
+                        subprocess.run(['powercfg', '/change', 'monitor-timeout-ac', '10'], 
+                                    capture_output=True, check=False)
+                        subprocess.run(['powercfg', '/change', 'monitor-timeout-dc', '5'], 
+                                    capture_output=True, check=False)
+                        subprocess.run(['powercfg', '/change', 'standby-timeout-ac', '30'], 
+                                    capture_output=True, check=False)
+                        subprocess.run(['powercfg', '/change', 'standby-timeout-dc', '15'], 
+                                    capture_output=True, check=False)
+                        print("Windows sleep settings restored via powercfg")
+                    except Exception as e2:
+                        print(f"Powercfg fallback also failed: {e2}")
+                
+            elif system == "Darwin":  # macOS
+                # macOS: Kill caffeinate process
+                try:
+                    result = subprocess.run(['pkill', 'caffeinate'], 
+                                        capture_output=True, text=True, check=False)
+                    if result.returncode == 0:
+                        print("macOS sleep settings restored successfully")
+                        self.macos_caffeinate_process = False
+                    else:
+                        print(f"macOS sleep restoration failed: {result.stderr}")
+                except Exception as e:
+                    print(f"macOS sleep restoration failed: {e}")
+                
+            elif system == "Linux":
+                # Linux: Restore screen saver and DPMS
+                try:
+                    result1 = subprocess.run(['xset', 's', 'on'], capture_output=True, text=True, check=False)
+                    result2 = subprocess.run(['xset', 's', 'blank'], capture_output=True, text=True, check=False)
+                    result3 = subprocess.run(['xset', '+dpms'], capture_output=True, text=True, check=False)
+                    
+                    if result1.returncode == 0 and result2.returncode == 0 and result3.returncode == 0:
+                        print("Linux sleep settings restored successfully")
+                        self.linux_sleep_prevention_active = False
+                    else:
+                        print(f"Linux sleep restoration failed: {result1.stderr}, {result2.stderr}, {result3.stderr}")
+                        
+                except FileNotFoundError:
+                    print("xset not found, trying alternative methods...")
+                    # Try alternative methods for Linux
+                    try:
+                        subprocess.run(['gsettings', 'set', 'org.gnome.desktop.session', 'idle-delay', 'uint32', '600'], 
+                                    capture_output=True, check=False)
+                        print("Linux sleep settings restored via gsettings")
+                    except:
+                        print("Linux sleep restoration methods not available")
+                    
+        except Exception as e:
+            print(f"Could not restore sleep settings: {e}")
     
     def fix_image_orientation(self, image):
         """Fix image orientation based on EXIF data"""
@@ -347,6 +520,10 @@ class QuickImagePresenter:
         self.presentation_window.update_idletasks()
         screen_height = self.presentation_window.winfo_screenheight()
         self.timer_label.place(x=50, y=screen_height - 150)
+        
+        # Prevent sleep during presentation
+        self.prevent_sleep()
+        self.sleep_prevention_active = True
         
         # Start presentation
         self.show_next_image()
@@ -664,6 +841,11 @@ class QuickImagePresenter:
     def stop_presentation(self):
         self.presentation_running = False
         self.stop_timer = True
+        
+        # Restore sleep settings if they were changed
+        if self.sleep_prevention_active:
+            self.restore_sleep_settings()
+            self.sleep_prevention_active = False
         
         if self.presentation_window:
             self.presentation_window.destroy()
